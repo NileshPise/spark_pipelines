@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: spark-pipelines
-Version: 1.1.0
+Version: 1.0.0
 Summary: A Python package for validating Spark DataFrames against data quality rules.
 Home-page: https://github.com/NileshPise/spark_pipelines
 Author: Nilesh Pise
