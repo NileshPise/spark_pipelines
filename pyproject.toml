@@ -1,6 +1,6 @@
 [tool]
 name = "spark-pipelines"
-version = "1.0.0"
+version = "1.6.0"
 description = "A Python package for validating Spark DataFrames against data quality rules."
 authors = "Nilesh Pise"
 license = "MIT"

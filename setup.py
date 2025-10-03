@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="spark-pipelines",
-    version="1.0.0",
+    version="1.6.0",
     author="Nilesh Pise",
     author_email="neil9190patil@gmail.com",
     description="A Python package for validating Spark DataFrames against data quality rules.",

@@ -18,10 +18,15 @@ pip install spark-pipelines
 
 To get started, you can define your data quality rules in a dictionary format, where the keys are human-readable descriptions of the rules, and the values are SQL filter expressions. Then, you can decorate your data loading functions with the appropriate validation decorator.
 
-Here’s a simple example:
+Here is a simple example:
 
 ```python
 from spark_pipelines import DataQuality
+
+dq = DataQuality(
+    spark=spark,
+    job_name="employee_ingestion_job"
+                )
 
 # Define your data quality rules
 rules = {
@@ -30,7 +35,7 @@ rules = {
 }
 
 # Use the expect decorator to validate the DataFrame
-@DataQuality.expect(rules)
+@dq.expect(rules)
 def load_employee_df():
     return spark.read.table("employee")
 
@@ -49,11 +54,6 @@ The package provides several decorators for different validation strategies:
    def load_employee_df():
        return spark.read.table("employee")
 
-
-    @DataQuality.expect(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
-    def load_employee_df():
-        return df_employee
-
    ```
 
 2. **expect_drop**: This decorator validates the DataFrame and returns a filtered DataFrame containing only the valid records. Failed records are excluded.
@@ -63,10 +63,6 @@ The package provides several decorators for different validation strategies:
    def load_employee_df():
        return spark.read.table("employee")
 
-    
-    @DataQuality.expect_drop(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
-    def load_employee_df():
-        return df_employee
    ```
 
 3. **expect_fail**: This decorator validates the DataFrame and raises an exception if any validation rule fails. This is useful for stopping the pipeline execution when data quality issues are detected.
@@ -76,38 +72,26 @@ The package provides several decorators for different validation strategies:
    def load_employee_df():
        return spark.read.table("employee")
 
-
-    @DataQuality.expect_fail(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
-    def load_employee_df():
-        return df_employee
    ```
 
 4. **expect_quarantine**: This decorator validates the DataFrame and optionally quarantines failed records to a specified location or table. You can specify either a path or a table name for storing the quarantined records.
 
    ```python
-   @DataQuality.expect_quarantine(rules, quarantine_location="/mnt/quarantine/employees")
+   from spark_pipelines import DataQuality
+   dq = DataQuality(
+        spark=spark,
+        job_name="employee_ingestion_job",
+        dq_table_name="data_quality.default.employee_dq",
+        quarantine_table="data_quality.default.employee_qr",
+        quarantine_format='delta'
+                 )
+
+   @dq.expect_quarantine(rules)
    def load_employee_df():
        return spark.read.table("employee")
 
-    
-    @DataQuality.expect_quarantine(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality', quarantine_table='nilesh.default.quarantine_tbl01', quarantine_format='delta')
-    def load_employee_df():
-        return df_employee
    ```
 
-### Quarantine Handling
-
-When using the `expect_quarantine` decorator, you can specify the format for the quarantined records (e.g., Parquet, Delta, Iceberg). Ensure that you provide either a `quarantine_location` or a `quarantine_table`, but not both.
-
-### Example of Quarantine
-
-```python
-@DataQuality.expect_quarantine(rules, quarantine_location="/mnt/quarantine/employees", quarantine_format="delta")
-def load_employee_df():
-    return spark.read.table("employee")
-
-df_valid = load_employee_df()
-```
 
 ### Documentation
 
