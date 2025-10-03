@@ -1,8 +1,50 @@
 class DataQuality:
 
+    from typing import List, Dict, Optional
+    
+    @classmethod
+    def save_data_quality_results(
+        cls,
+        results: List[Dict],
+        table_name: Optional[str] = None
+    ) -> None:
+        """
+        Save data quality validation results into a Spark table.
+
+        Parameters
+        ----------
+
+        results : list[dict]
+            A list of dictionaries, where each dictionary contains:
+            {
+
+                "job_name": str
+                "expectation_type": str,
+                "rule": str,
+                "condition": str,
+                "total_records": int,
+                "passed_records": int,
+                "failed_records": int,
+                "status": str
+            }
+
+        table_name : str, optional
+            Name of the Spark table where results will be stored (default: data_quality_results).
+        """
+        from pyspark.sql import Row, DataFrame
+        from pyspark.sql.functions import current_timestamp
+
+        row_results = [Row(**r) for r in results]
+        results_df = spark.createDataFrame(row_results)
+        results_df = results_df.withColumn("_timestamp", current_timestamp())
+        results_df.write.mode("append").saveAsTable(table_name)
+        print(f" Data quality results appended to table `{table_name}`")
+
+
+
     from typing import Dict
     @staticmethod
-    def expect(rules: Dict[str, str]):
+    def expect(rules: Dict[str, str], job_name: Optional[str] = None,  dq_table_name: Optional[str] = None):
         """
         A decorator to validate Spark DataFrames against data quality rules.
 
@@ -18,7 +60,12 @@ class DataQuality:
                 "Employee ID should be greater than 2": "emp_id > 2",
                 "Name should not be null": "fname IS NOT NULL"
             }
+        job_name : str, optional
+            Name of the job where data quality rules are applied.
+            This is used to identify the job in the data quality results table.
 
+        dq_table_name : str, optional
+                    Name of the table where data quality results will be stored.
         Returns
         -------
         function
@@ -53,24 +100,42 @@ class DataQuality:
                         "status": "PASSED" if failed_count == 0 else "FAILED"
                     }
 
+
                 # Print results in a framework-style report
                 print("="*50)
                 print(" DATA QUALITY VALIDATION REPORT ")
                 print("="*50)
+                dq_input = []
                 for desc, result in validation_results.items():
                     print(f"Rule: {desc}")
                     print(f" - Condition: {result['rule']}")
                     print(f" - Total: {result['total']} | Passed: {result['passed']} | Failed: {result['failed']}")
                     print(f" - Status: {result['status']}")
                     print("-"*50)
+                    if dq_table_name and job_name:    
+                        dq_input.append(
+                            {
+                                "job_name": job_name,
+                                "expectation_type": 'expect',
+                                "rule": desc,
+                                "condition": result['rule'],
+                                "total_records": result['total'],
+                                "passed_records": result['passed'],
+                                "failed_records": result['failed'],
+                                "status": result['status']
+                            })
+                if dq_table_name and job_name:
+                    DataQuality.save_data_quality_results(dq_input, dq_table_name)
 
                 return df
             return wrapper
         return decorator
+    
+
 
     from typing import Dict
     @staticmethod
-    def expect_drop(rules: Dict[str, str]):
+    def expect_drop(rules: Dict[str, str], job_name: Optional[str] = None,  dq_table_name: Optional[str] = None):
         """
         A decorator to validate Spark DataFrames against data quality rules.
 
@@ -86,7 +151,12 @@ class DataQuality:
                 "Employee ID should be greater than 2": "emp_id > 2",
                 "Name should not be null": "fname IS NOT NULL"
             }
+        job_name : str, optional
+            Name of the job where data quality rules are applied.
+            This is used to identify the job in the data quality results table.
 
+        dq_table_name : str, optional
+                    Name of the table where data quality results will be stored.
         Returns
         -------
         function
@@ -125,13 +195,29 @@ class DataQuality:
                 print("="*50)
                 print(" DATA QUALITY VALIDATION REPORT ")
                 print("="*50)
+
+                dq_input=[]
                 for desc, result in validation_results.items():
                     print(f"Rule: {desc}")
                     print(f" - Condition: {result['rule']}")
                     print(f" - Total: {result['total']} | Passed: {result['passed']} | Failed: {result['failed']}")
                     print(f" - Status: {result['status']}")
                     print("-"*50)
-                
+                    if dq_table_name and job_name:    
+                        dq_input.append(
+                            {
+                                "job_name": job_name,
+                                "expectation_type": 'expect_drop',
+                                "rule": desc,
+                                "condition": result['rule'],
+                                "total_records": result['total'],
+                                "passed_records": result['passed'],
+                                "failed_records": result['failed'],
+                                "status": result['status']
+                            })
+                if dq_table_name and job_name:
+                    DataQuality.save_data_quality_results(dq_input, dq_table_name)
+
                 combined_condition = " AND ".join([f"({condition})" for condition in rules.values()])
                 filtered_df = df.filter(expr(f"({combined_condition})"))
 
@@ -139,9 +225,12 @@ class DataQuality:
             return wrapper
         return decorator
 
+
+
+
     from typing import Dict
     @staticmethod
-    def expect_fail(rules: Dict[str, str]):
+    def expect_fail(rules: Dict[str, str], job_name: Optional[str] = None,  dq_table_name: Optional[str] = None):
         """
         A decorator to validate Spark DataFrames against data quality rules.
 
@@ -158,6 +247,12 @@ class DataQuality:
                 "Name should not be null": "fname IS NOT NULL"
             }
 
+        job_name : str, optional
+            Name of the job where data quality rules are applied.
+            This is used to identify the job in the data quality results table.
+
+        dq_table_name : str, optional
+                    Name of the table where data quality results will be stored.
         Returns
         -------
         function
@@ -193,6 +288,7 @@ class DataQuality:
                     }
 
                 # Print results in a framework-style report
+                dq_input=[]
                 print("="*50)
                 print(" DATA QUALITY VALIDATION REPORT ")
                 print("="*50)
@@ -202,7 +298,22 @@ class DataQuality:
                     print(f" - Total: {result['total']} | Passed: {result['passed']} | Failed: {result['failed']}")
                     print(f" - Status: {result['status']}")
                     print("-"*50)
-                
+                    
+                    if dq_table_name and job_name:
+                        dq_input.append(
+                            {
+                                "job_name": job_name,
+                                "expectation_type": 'expect_fail',
+                                "rule": desc,
+                                "condition": result['rule'],
+                                "total_records": result['total'],
+                                "passed_records": result['passed'],
+                                "failed_records": result['failed'],
+                                "status": result['status']
+                            })
+                if dq_table_name and job_name:
+                    DataQuality.save_data_quality_results(dq_input, dq_table_name)
+
                 combined_condition = " AND ".join([f"({condition})" for condition in rules.values()])
                 
                 if df.filter(expr(f"({combined_condition})")).count() != df.count():
@@ -212,10 +323,14 @@ class DataQuality:
             return wrapper
         return decorator
 
+
+
     from typing import Dict, Optional
     @staticmethod
     def expect_quarantine(
         rules: Dict[str, str],
+        job_name: Optional[str] = None,  
+        dq_table_name: Optional[str] = None,
         quarantine_location: Optional[str] = None,
         quarantine_table: Optional[str] = None,
         quarantine_format: str = "parquet"   # default format
@@ -240,7 +355,12 @@ class DataQuality:
               - 'parquet'
               - 'delta'
               - 'iceberg'
+        job_name : str, optional
+            Name of the job where data quality rules are applied.
+            This is used to identify the job in the data quality results table.
 
+        dq_table_name : str, optional
+                    Name of the table where data quality results will be stored.
         Returns
         -------
         function
@@ -289,6 +409,7 @@ class DataQuality:
                 valid_df = df
                 
                 # Print results in a framework-style report
+                dq_input=[]
                 print("="*50)
                 print(" DATA QUALITY VALIDATION REPORT ")
                 print("="*50)
@@ -304,7 +425,20 @@ class DataQuality:
                     print(f" - Total: {total_count} | Passed: {passed_count} | Failed: {failed_count}")
                     print(f" - Status: {'PASSED' if failed_count == 0 else 'FAILED'}")
                     print("-"*50)
-
+                    
+                    if dq_table_name and job_name:
+                        dq_input.append(
+                            {
+                                "job_name": job_name,
+                                "expectation_type": 'expect_quarentine',
+                                "rule": desc,
+                                "condition": condition,
+                                "total_records": total_count,
+                                "passed_records":passed_count,
+                                "failed_records": failed_count,
+                                "status": 'PASSED' if failed_count == 0 else 'FAILED'
+                            })
+                
                     # quarantine failed records if configured
                     if failed_count > 0:
 
@@ -327,7 +461,9 @@ class DataQuality:
 
                     # continue only with passed records
                     valid_df = passed_df
-
+                if dq_table_name and job_name:
+                    DataQuality.save_data_quality_results(dq_input, dq_table_name)
+                    
                 return valid_df
             return wrapper
         return decorator

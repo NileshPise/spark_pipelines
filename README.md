@@ -48,6 +48,12 @@ The package provides several decorators for different validation strategies:
    @DataQuality.expect(rules)
    def load_employee_df():
        return spark.read.table("employee")
+
+
+    @DataQuality.expect(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
+    def load_employee_df():
+        return df_employee
+
    ```
 
 2. **expect_drop**: This decorator validates the DataFrame and returns a filtered DataFrame containing only the valid records. Failed records are excluded.
@@ -56,6 +62,11 @@ The package provides several decorators for different validation strategies:
    @DataQuality.expect_drop(rules)
    def load_employee_df():
        return spark.read.table("employee")
+
+    
+    @DataQuality.expect_drop(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
+    def load_employee_df():
+        return df_employee
    ```
 
 3. **expect_fail**: This decorator validates the DataFrame and raises an exception if any validation rule fails. This is useful for stopping the pipeline execution when data quality issues are detected.
@@ -64,6 +75,11 @@ The package provides several decorators for different validation strategies:
    @DataQuality.expect_fail(rules)
    def load_employee_df():
        return spark.read.table("employee")
+
+
+    @DataQuality.expect_fail(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality')
+    def load_employee_df():
+        return df_employee
    ```
 
 4. **expect_quarantine**: This decorator validates the DataFrame and optionally quarantines failed records to a specified location or table. You can specify either a path or a table name for storing the quarantined records.
@@ -72,6 +88,11 @@ The package provides several decorators for different validation strategies:
    @DataQuality.expect_quarantine(rules, quarantine_location="/mnt/quarantine/employees")
    def load_employee_df():
        return spark.read.table("employee")
+
+    
+    @DataQuality.expect_quarantine(rules, job_name='employee_data_ingestion', dq_table_name='quality_db.default.data_quality', quarantine_table='nilesh.default.quarantine_tbl01', quarantine_format='delta')
+    def load_employee_df():
+        return df_employee
    ```
 
 ### Quarantine Handling
